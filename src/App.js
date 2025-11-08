@@ -4,6 +4,9 @@ import Login from "./Login";
 import AdminModule from "./Admin/index";       // pestañas de Administrador
 import StudentModule from "./Alumno/index";   // pestañas de Alumno (EPIC02)
 
+// 👉 Importamos la función que cierra sesión en el backend
+import { logoutRequest } from "./api/Logout";
+
 function Main({ user, onLogout }) {
   // Vista por rol
   let content = (
@@ -17,9 +20,6 @@ function Main({ user, onLogout }) {
   } else if (user.role === "Usuario" || user.role === "Alumno") {
     content = <StudentModule onLogout={onLogout} />; // Dashboard / Agendar / Mis asesorías / Ajustes
   }
-  // Si quieres agregar más adelante:
-  // else if (user.role === "Docente") { content = <TeacherModule /> }
-  // else if (user.role === "Coordinador") { content = <CoordinatorModule /> }
 
   return (
     <div style={{ padding: 20 }}>
@@ -56,17 +56,29 @@ function App() {
     }
   }, []);
 
-  function handleLogin(u) {
-    setUser(u);
+  async function handleLogout() {
+    // Confirmación opcional
+    if (!window.confirm("¿Deseas cerrar sesión?")) return;
+
+    try {
+      await logoutRequest(); // Llama al backend para invalidar la sesión
+    } catch (err) {
+      console.error("Error al cerrar sesión en el servidor:", err);
+    } finally {
+      // Limpieza local
+      setUser(null);
+      try {
+        localStorage.removeItem("user");
+      } catch (err) {
+        console.warn("No se pudo limpiar localStorage", err);
+      }
+      // Redirección opcional
+      window.location.href = "/login";
+    }
   }
 
-  function handleLogout() {
-    setUser(null);
-    try {
-      localStorage.removeItem("user");
-    } catch (err) {
-      console.warn("No se pudo limpiar localStorage", err);
-    }
+  function handleLogin(u) {
+    setUser(u);
   }
 
   // Si no hay usuario -> login

@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import "./Styles/dashboard.css";
+import { logout } from "../api/Logout"; // ✅ Importar el logout
 
 const now = () => new Date();
 
@@ -15,6 +16,13 @@ export default function DashboardTab({ sessions }) {
 
   return (
     <section className="dash">
+      {/* ✅ Botón de cerrar sesión */}
+      <div className="logout-bar">
+        <button className="logout-btn" onClick={logout}>
+          Cerrar sesión
+        </button>
+      </div>
+
       <div className="cards">
         <div className="card stat">
           <span className="stat-label">Próximas</span>
