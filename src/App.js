@@ -5,7 +5,7 @@ import AdminModule from "./Admin/index";       // pestañas de Administrador
 import StudentModule from "./Alumno/index";   // pestañas de Alumno (EPIC02)
 
 // 👉 Importamos la función que cierra sesión en el backend
-import { logoutRequest } from "./api/Logout";
+import { logout } from "./api/Logout"; // ✅ corregido
 
 function Main({ user, onLogout }) {
   // Vista por rol
@@ -57,22 +57,19 @@ function App() {
   }, []);
 
   async function handleLogout() {
-    // Confirmación opcional
     if (!window.confirm("¿Deseas cerrar sesión?")) return;
 
     try {
-      await logoutRequest(); // Llama al backend para invalidar la sesión
+      await logout(); // ✅ llamada correcta
     } catch (err) {
       console.error("Error al cerrar sesión en el servidor:", err);
     } finally {
-      // Limpieza local
       setUser(null);
       try {
         localStorage.removeItem("user");
       } catch (err) {
         console.warn("No se pudo limpiar localStorage", err);
       }
-      // Redirección opcional
       window.location.href = "/login";
     }
   }
@@ -81,10 +78,7 @@ function App() {
     setUser(u);
   }
 
-  // Si no hay usuario -> login
   if (!user) return <Login onLogin={handleLogin} />;
-
-  // Si hay usuario -> panel principal por rol
   return <Main user={user} onLogout={handleLogout} />;
 }
 
