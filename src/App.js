@@ -7,6 +7,9 @@ import TeacherModule from "./Docentes/index";   // pestañas de Docente (EPIC03)
 import CoordinatorModule from "./Coordinador/index"; // pestañas de Coordinador (EPIC04)
 // Si usaste las carpetas en inglés, ajusta los nombres de importación según corresponda
 
+// 👉 Importamos la función que cierra sesión en el backend
+import { logout } from "./api/Logout"; // ✅ corregido
+
 function Main({ user, onLogout }) {
   // Vista por rol
   let content = (
@@ -60,23 +63,29 @@ function App() {
     }
   }, []);
 
+  async function handleLogout() {
+    if (!window.confirm("¿Deseas cerrar sesión?")) return;
+
+    try {
+      await logout(); // ✅ llamada correcta
+    } catch (err) {
+      console.error("Error al cerrar sesión en el servidor:", err);
+    } finally {
+      setUser(null);
+      try {
+        localStorage.removeItem("user");
+      } catch (err) {
+        console.warn("No se pudo limpiar localStorage", err);
+      }
+      window.location.href = "/login";
+    }
+  }
+
   function handleLogin(u) {
     setUser(u);
   }
 
-  function handleLogout() {
-    setUser(null);
-    try {
-      localStorage.removeItem("user");
-    } catch (err) {
-      console.warn("No se pudo limpiar localStorage", err);
-    }
-  }
-
-  // Si no hay usuario -> login
   if (!user) return <Login onLogin={handleLogin} />;
-
-  // Si hay usuario -> panel principal por rol
   return <Main user={user} onLogout={handleLogout} />;
 }
 
