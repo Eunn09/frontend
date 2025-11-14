@@ -1,92 +1,110 @@
 import React, { useEffect, useState } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import "./App.css";
 import Login from "./Login";
-import AdminModule from "./Admin/index";        // pestañas de Administrador
-import StudentModule from "./Alumno/index";     // pestañas de Alumno (EPIC02)
-import TeacherModule from "./Docentes/index";   // pestañas de Docente (EPIC03)
-import CoordinatorModule from "./Coordinador/index"; // pestañas de Coordinador (EPIC04)
-// Si usaste las carpetas en inglés, ajusta los nombres de importación según corresponda
-
-// 👉 Importamos la función que cierra sesión en el backend
-import { logout } from "./api/Logout"; // ✅ corregido
-
-function Main({ user, onLogout }) {
-  // Vista por rol
-  let content = (
-    <p>
-      Bienvenido, <strong>{user.role}</strong>. No tienes un módulo asignado todavía.
-    </p>
-  );
-
-  if (user.role === "Administrador") {
-    content = <AdminModule />; // Users / Roles / Logs / Settings
-  } else if (user.role === "Usuario" || user.role === "Alumno") {
-    content = <StudentModule onLogout={onLogout} />; // Dashboard / Agendar / Mis asesorías / Ajustes
-  } else if (user.role === "Docente") {
-    content = <TeacherModule onLogout={onLogout} />; // Estudiantes / Asignar / Mis asesorías / Historial / Ajustes
-  } else if (user.role === "Coordinador") {
-    content = <CoordinatorModule />; // Profesores / Áreas / Reportes
-  }
-
-  return (
-    <div style={{ padding: 20 }}>
-      <header
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 20,
-        }}
-      >
-        <h1>Panel principal</h1>
-        <div>
-          <span style={{ marginRight: 12 }}>Hola, {user.email}</span>
-          <button onClick={onLogout}>Cerrar sesión</button>
-        </div>
-      </header>
-
-      <section style={{ marginTop: 24 }}>{content}</section>
-    </div>
-  );
-}
+import AdminModule from "./Admin/index";
+import StudentModule from "./Alumno/index";
+import TeacherModule from "./Docentes/index";
+import CoordinatorModule from "./Coordinador/index";
+import { logout } from "./api/Logout";
 
 function App() {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    // Restaurar sesión si existe
-    try {
-      const raw = localStorage.getItem("user");
-      if (raw) setUser(JSON.parse(raw));
-    } catch (err) {
-      console.warn("Error leyendo sesión", err);
-    }
+    const saved = localStorage.getItem("user");
+    if (saved) setUser(JSON.parse(saved));
   }, []);
 
-  async function handleLogout() {
+  const handleLogin = (userData) => {
+    setUser(userData);
+    localStorage.setItem("user", JSON.stringify(userData));
+  };
+
+  const handleLogout = async () => {
     if (!window.confirm("¿Deseas cerrar sesión?")) return;
 
     try {
-      await logout(); // ✅ llamada correcta
+      await logout(); 
     } catch (err) {
-      console.error("Error al cerrar sesión en el servidor:", err);
+      console.error("Error al cerrar sesión:", err);
     } finally {
+      // Limpiar datos locales
       setUser(null);
-      try {
-        localStorage.removeItem("user");
-      } catch (err) {
-        console.warn("No se pudo limpiar localStorage", err);
-      }
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+      localStorage.removeItem("role");
+
+      // Redirigir
       window.location.href = "/login";
     }
-  }
+  };
 
-  function handleLogin(u) {
-    setUser(u);
-  }
+  const ProtectedRoute = ({ element, allowedRoles }) => {
+    const token = localStorage.getItem("token");
+    const role = parseInt(localStorage.getItem("role"));
 
-  if (!user) return <Login onLogin={handleLogin} />;
-  return <Main user={user} onLogout={handleLogout} />;
+    if (!token) return <Navigate to="/" replace />;
+    if (!allowedRoles.includes(role)) return <Navigate to="/" replace />;
+
+    return element;
+  };
+
+  return (
+    <Router>
+      <Routes>
+        {/* LOGIN */}
+        <Route path="/" element={<Login onLogin={handleLogin} />} />
+
+        {/* ADMIN */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute
+              element={<AdminModule onLogout={handleLogout} />}
+              allowedRoles={[1]}
+            />
+          }
+        />
+
+        {/* PROFESOR */}
+        <Route
+          path="/profesor"
+          element={
+            <ProtectedRoute
+              element={<TeacherModule onLogout={handleLogout} />}
+              allowedRoles={[2]}
+            />
+          }
+        />
+
+        {/* ALUMNO */}
+        <Route
+          path="/alumno"
+          element={
+            <ProtectedRoute
+              element={<StudentModule onLogout={handleLogout} />}
+              allowedRoles={[3]}
+            />
+          }
+        />
+
+        {/* COORDINADOR */}
+        <Route
+          path="/coordinador"
+          element={
+            <ProtectedRoute
+              element={<CoordinatorModule onLogout={handleLogout} />}
+              allowedRoles={[4]}
+            />
+          }
+        />
+
+        {/* DEFAULT */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Router>
+  );
 }
 
 export default App;
