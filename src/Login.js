@@ -1,71 +1,70 @@
 import React, { useState } from "react";
 import "./Styles/login.css";
+import { login } from "./api/loginApi.js";
+import { useNavigate } from "react-router-dom";
 
-export default function Login({ onLogin }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+export default function Login() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
 
-  function handleSubmit(e) {
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
+    setMessage("");
 
-    // Validaciones básicas
-    if (!email.trim() || !password) {
-      setError('Por favor ingresa email y contraseña.');
+    if (!email.trim() || !password.trim()) {
+      setError("Por favor ingresa usuario y contraseña.");
       return;
     }
 
-    // Validación de formato de email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setError('El formato del email no es válido.');
-      return;
-    }
+    try {
+      const data = await login(email, password);
 
-    // Definición de usuarios válidos (simulación)
-    const users = {
-      "admin@example.com": { role: "Administrador", id: 1 },
-      "usuario@example.com": { role: "Usuario", id: 2 },
-      "docente@example.com": { role: "Docente", id: 3 },
-      "coordinador@example.com": { role: "Coordinador", id: 4 },
-    };
+      if (data.token) {
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("role", data.role);
 
-    const user = users[email.toLowerCase()];
+        if (remember) {
+          localStorage.setItem("user", JSON.stringify({ email }));
+        }
 
-    // Verificar existencia de usuario
-    if (!user) {
-      setError('Usuario no encontrado.');
-      return;
-    }
+        setMessage("Inicio de sesión exitoso");
 
-    // Contraseña simulada: "1"
-    if (password !== "1") {
-      setError('Contraseña incorrecta.');
-      return;
-    }
-
-    // Login exitoso
-    const loggedUser = { email, role: user.role, id: user.id };
-
-    if (typeof onLogin === "function") onLogin(loggedUser);
-
-    if (remember) {
-      try {
-        localStorage.setItem("user", JSON.stringify(loggedUser));
-      } catch (err) {
-        console.warn("No se pudo escribir localStorage", err);
+        setTimeout(() => {
+          switch (data.role) {
+            case 1:
+              navigate("/admin");
+              break;
+            case 2:
+              navigate("/profesor");
+              break;
+            case 3:
+              navigate("/alumno");
+              break;
+            case 4:
+              navigate("/coordinador");
+              break;
+            default:
+              navigate("/dashboard");
+          }
+        }, 1000);
+      } else {
+        setError(data.message || "Error al iniciar sesión.");
       }
+    } catch (err) {
+      console.error(err);
+      setError("Error al conectar con el servidor o credenciales inválidas.");
     }
-
-    alert(`Bienvenido ${user.role}`);
-  }
+  };
 
   return (
     <div className="login-bg">
       <div className="login-wrap">
-        {/* Avatar */}
         <div className="avatar">
           <svg viewBox="0 0 64 64" aria-hidden="true">
             <circle cx="32" cy="32" r="32" />
@@ -76,8 +75,8 @@ export default function Login({ onLogin }) {
           </svg>
         </div>
 
-        {/* Form */}
         <form className="login-form" onSubmit={handleSubmit}>
+          {/* Usuario */}
           <div className="field">
             <span className="icon" aria-hidden="true">
               <svg viewBox="0 0 24 24">
@@ -85,17 +84,17 @@ export default function Login({ onLogin }) {
               </svg>
             </span>
             <input
-              id="login-email"
-              type="email"
-              placeholder="Email ID"
-              autoComplete="email"
+              id="login-username"
+              type="text"
+              placeholder="Usuario"
+              autoComplete="username"
               required
               value={email}
-              onChange={e => setEmail(e.target.value)}
-              aria-label="email"
+              onChange={(e) => setEmail(e.target.value)}
             />
           </div>
 
+          {/* Contraseña */}
           <div className="field">
             <span className="icon" aria-hidden="true">
               <svg viewBox="0 0 24 24">
@@ -105,30 +104,32 @@ export default function Login({ onLogin }) {
             <input
               id="login-password"
               type="password"
-              placeholder="Password"
+              placeholder="Contraseña"
               autoComplete="current-password"
               required
               value={password}
-              onChange={e => setPassword(e.target.value)}
-              aria-label="password"
+              onChange={(e) => setPassword(e.target.value)}
             />
           </div>
 
+          {/* Recordarme y link */}
           <div className="meta">
             <label className="remember">
               <input
                 type="checkbox"
                 checked={remember}
-                onChange={e => setRemember(e.target.checked)}
+                onChange={(e) => setRemember(e.target.checked)}
               />
-              <span>Remember me</span>
+              <span>Recuérdame</span>
             </label>
             <a className="forgot" href="#forgot">
-              Forgot Password?
+              ¿Olvidaste tu contraseña?
             </a>
           </div>
 
+          {/* Mensajes */}
           {error && <div style={{ color: "crimson", marginBottom: 12 }}>{error}</div>}
+          {message && <div style={{ color: "green", marginBottom: 12 }}>{message}</div>}
 
           <button className="btn-login" type="submit">
             LOGIN
